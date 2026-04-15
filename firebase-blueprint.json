@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "Prediction": {
+      "title": "Prediction",
+      "description": "A news verification prediction record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who requested verification" },
+        "text": { "type": "string", "description": "The news text analyzed" },
+        "url": { "type": "string", "description": "The news URL analyzed" },
+        "result": {
+          "type": "object",
+          "properties": {
+            "classification": { "type": "string", "enum": ["Authentic", "Misleading", "Fake"] },
+            "confidence": { "type": "number" },
+            "reasoning": { "type": "string" },
+            "evidence": { "type": "array" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "result", "timestamp"]
+    }
+  },
+  "firestore": {
+    "predictions/{predictionId}": {
+      "schema": "Prediction",
+      "description": "Collection of news verification history"
+    }
+  }
+}
