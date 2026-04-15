@@ -18,16 +18,22 @@ const hasEnvConfig = !!envConfig.apiKey && !!envConfig.projectId;
 
 let firebaseConfig: any = envConfig;
 
-// Only try to load the local config in development mode
-if (import.meta.env.DEV && !hasEnvConfig) {
-  try {
-    // @ts-ignore
-    const module = await import("../firebase-applet-config.json");
-    firebaseConfig = module.default;
-  } catch (e) {
-    console.warn("Firebase config not found in development, falling back to environment variables.");
+// Use an async IIFE to handle the dynamic import safely
+(async () => {
+  if (import.meta.env.DEV && !hasEnvConfig) {
+    try {
+      // We use @vite-ignore to prevent Vite from failing the build 
+      // when this file is missing (which it will be in production/GitHub).
+      const module = await import(/* @vite-ignore */ "../firebase-applet-config.json");
+      firebaseConfig = module.default;
+      
+      // Re-initialize with the correct config if found
+      initializeApp(firebaseConfig);
+    } catch (e) {
+      console.warn("Firebase config not found in development, falling back to environment variables.");
+    }
   }
-}
+})();
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
