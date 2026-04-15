@@ -18,7 +18,11 @@ import {
   LayoutDashboard,
   FileText,
   Activity,
-  HelpCircle
+  HelpCircle,
+  Download,
+  Map,
+  Target,
+  Share2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -61,6 +65,80 @@ export default function Dashboard() {
   const [newsFeed, setNewsFeed] = useState<any[]>([]);
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
+  const [showTruthMap, setShowTruthMap] = useState(false);
+
+  const getReliabilityStats = () => {
+    if (history.length === 0) return null;
+    
+    const authenticCount = history.filter(h => h.result.classification === "Authentic").length;
+    const misleadingCount = history.filter(h => h.result.classification === "Misleading").length;
+    const fakeCount = history.filter(h => h.result.classification === "Fake").length;
+    
+    // Group by domain
+    const domainStats: Record<string, { total: number, authentic: number }> = {};
+    history.forEach(h => {
+      if (h.url) {
+        try {
+          const domain = new URL(h.url).hostname;
+          if (!domainStats[domain]) domainStats[domain] = { total: 0, authentic: 0 };
+          domainStats[domain].total++;
+          if (h.result.classification === "Authentic") domainStats[domain].authentic++;
+        } catch (e) {}
+      }
+    });
+
+    const topDomains = Object.entries(domainStats)
+      .map(([domain, stats]) => ({
+        domain,
+        reliability: Math.round((stats.authentic / stats.total) * 100),
+        total: stats.total
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    return {
+      authenticCount,
+      misleadingCount,
+      fakeCount,
+      topDomains,
+      avgConfidence: Math.round(history.reduce((acc, curr) => acc + curr.result.confidence, 0) / history.length)
+    };
+  };
+
+  const reliabilityStats = getReliabilityStats();
+
+  const exportReport = () => {
+    if (!result) return;
+    
+    const reportContent = `
+NEWS AUTHENTIX - VERIFICATION REPORT
+Generated on: ${new Date().toLocaleString()}
+------------------------------------------
+CLASSIFICATION: ${result.classification.toUpperCase()}
+CONFIDENCE SCORE: ${result.confidence}%
+------------------------------------------
+SUMMARY:
+${result.reasoning}
+
+EVIDENCE BREAKDOWN:
+${result.evidence.map((e, i) => `${i+1}. [${e.type}] ${e.phrase}\n   Analysis: ${e.explanation}\n   Sentiment: ${e.sentiment}`).join('\n\n')}
+
+SOURCE CREDIBILITY:
+${result.sourceCredibility?.details || "No source details available."}
+------------------------------------------
+© 2026 News Authentix Professional
+    `;
+    
+    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Verification_Report_${new Date().getTime()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const fetchNewsFeed = async () => {
     setIsLoadingFeed(true);
@@ -172,7 +250,7 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  const stats = [
+  const quickStats = [
     { label: "Total Verifications", value: history.length, icon: <Activity className="text-blue-500" />, trend: "+12%" },
     { label: "Authentic News", value: history.filter(h => h.result.classification === "Authentic").length, icon: <ShieldCheck className="text-emerald-500" />, trend: "84%" },
     { label: "Misleading/Fake", value: history.filter(h => h.result.classification !== "Authentic").length, icon: <AlertTriangle className="text-amber-500" />, trend: "16%" },
@@ -281,7 +359,7 @@ export default function Dashboard() {
         <div className="p-10 max-w-7xl mx-auto space-y-10">
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, idx) => (
+            {quickStats.map((stat, idx) => (
               <motion.div 
                 key={idx}
                 initial={{ opacity: 0, y: 20 }}
@@ -414,9 +492,24 @@ export default function Dashboard() {
                               result.classification === "Misleading" ? "text-amber-700" :
                               "text-rose-700"
                             )}>{result.classification}</h4>
-                            <div className="text-right">
-                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Confidence Score</span>
-                              <span className="text-2xl font-display font-black text-slate-900">{result.confidence}%</span>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={exportReport}
+                                className="p-2 hover:bg-white/50 rounded-lg transition-colors text-slate-600"
+                                title="Export Report"
+                              >
+                                <Download size={18} />
+                              </button>
+                              <button 
+                                onClick={() => setShowTruthMap(!showTruthMap)}
+                                className={cn(
+                                  "p-2 rounded-lg transition-colors",
+                                  showTruthMap ? "bg-blue-600 text-white" : "hover:bg-white/50 text-slate-600"
+                                )}
+                                title="Truth Map View"
+                              >
+                                <Map size={18} />
+                              </button>
                             </div>
                           </div>
                           <div className="w-full h-3 bg-white/50 rounded-full overflow-hidden mb-6">
@@ -435,43 +528,86 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* Evidence Map */}
-                      <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
-                        <div className="flex items-center justify-between mb-8">
-                          <h4 className="text-xl font-display font-bold text-slate-900 flex items-center gap-3">
-                            <BarChart3 size={24} className="text-blue-600" />
-                            LIME Evidence Analysis
-                          </h4>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Explainable AI</span>
-                        </div>
-                        <div className="grid grid-cols-1 gap-4">
-                          {result.evidence?.map((item, idx) => (
-                            <motion.div 
-                              key={idx}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.05 }}
-                              className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex gap-6 group hover:bg-white hover:shadow-md transition-all"
-                            >
-                              <div className={cn(
-                                "w-1.5 h-full rounded-full shrink-0",
-                                item.sentiment === "Positive" ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" :
-                                item.sentiment === "Negative" ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]" :
-                                "bg-slate-300"
-                              )} />
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-2">
-                                  <p className="text-slate-900 font-bold text-lg italic">"{item.phrase}"</p>
-                                  <span className="text-[10px] font-black uppercase px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-500 shadow-sm">
-                                    {item.type}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-slate-500 font-medium leading-relaxed">{item.explanation}</p>
+                      {/* Truth Map Visualization */}
+                      {showTruthMap && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="bg-slate-900 rounded-[2.5rem] p-10 text-white overflow-hidden relative"
+                        >
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px]" />
+                          <div className="relative z-10">
+                            <div className="flex items-center gap-3 mb-8">
+                              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                                <Zap size={20} className="text-white" />
                               </div>
-                            </motion.div>
-                          ))}
+                              <div>
+                                <h3 className="text-lg font-bold">Interactive Truth Map</h3>
+                                <p className="text-xs text-slate-400">AI-powered evidence relationship visualization</p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {result.evidence.map((item, index) => (
+                                <div key={index} className="p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
+                                  <div className="flex items-start justify-between mb-4">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-1 rounded">
+                                      {item.type}
+                                    </span>
+                                    <div className={cn(
+                                      "w-2 h-2 rounded-full",
+                                      item.sentiment === "Positive" ? "bg-emerald-400" :
+                                      item.sentiment === "Negative" ? "bg-rose-400" : "bg-slate-400"
+                                    )} />
+                                  </div>
+                                  <p className="text-sm font-bold mb-3 italic text-slate-200">"{item.phrase}"</p>
+                                  <p className="text-xs text-slate-400 leading-relaxed">{item.explanation}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Evidence Map (Original List) */}
+                      {!showTruthMap && (
+                        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
+                          <div className="flex items-center justify-between mb-8">
+                            <h4 className="text-xl font-display font-bold text-slate-900 flex items-center gap-3">
+                              <BarChart3 size={24} className="text-blue-600" />
+                              LIME Evidence Analysis
+                            </h4>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Explainable AI</span>
+                          </div>
+                          <div className="grid grid-cols-1 gap-4">
+                            {result.evidence?.map((item, idx) => (
+                              <motion.div 
+                                key={idx}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex gap-6 group hover:bg-white hover:shadow-md transition-all"
+                              >
+                                <div className={cn(
+                                  "w-1.5 h-full rounded-full shrink-0",
+                                  item.sentiment === "Positive" ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" :
+                                  item.sentiment === "Negative" ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]" :
+                                  "bg-slate-300"
+                                )} />
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-slate-900 font-bold text-lg italic">"{item.phrase}"</p>
+                                    <span className="text-[10px] font-black uppercase px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-500 shadow-sm">
+                                      {item.type}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-slate-500 font-medium leading-relaxed">{item.explanation}</p>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Source Credibility */}
@@ -719,74 +855,95 @@ export default function Dashboard() {
 
           {activeTab === "analytics" && (
             <div className="space-y-10">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Reliability Scorecard */}
+                <div className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between mb-10">
-                    <h4 className="text-lg font-display font-bold text-slate-900">Classification Distribution</h4>
-                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                      <TrendingUp size={20} />
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">Reliability Scorecard</h3>
+                      <p className="text-sm text-slate-500">Aggregated verification performance</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                      <BarChart3 size={24} />
                     </div>
                   </div>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: "Authentic", value: history.filter(h => h.result.classification === "Authentic").length },
-                            { name: "Misleading", value: history.filter(h => h.result.classification === "Misleading").length },
-                            { name: "Fake", value: history.filter(h => h.result.classification === "Fake").length },
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={80}
-                          outerRadius={100}
-                          paddingAngle={8}
-                          dataKey="value"
-                        >
-                          <Cell fill="#10b981" />
-                          <Cell fill="#f59e0b" />
-                          <Cell fill="#f43f5e" />
-                        </Pie>
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: "#ffffff", border: "none", borderRadius: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.05)" }}
-                          itemStyle={{ color: "#0f172a", fontWeight: "bold" }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+                    <div className="p-4 bg-slate-50 rounded-2xl">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Authentic</p>
+                      <p className="text-2xl font-black text-emerald-600">{reliabilityStats?.authenticCount || 0}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Misleading</p>
+                      <p className="text-2xl font-black text-amber-600">{reliabilityStats?.misleadingCount || 0}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fake</p>
+                      <p className="text-2xl font-black text-rose-600">{reliabilityStats?.fakeCount || 0}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg. Conf.</p>
+                      <p className="text-2xl font-black text-blue-600">{reliabilityStats?.avgConfidence || 0}%</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center gap-8 mt-6">
-                    <LegendItem color="bg-emerald-500" label="Authentic" />
-                    <LegendItem color="bg-amber-500" label="Misleading" />
-                    <LegendItem color="bg-rose-500" label="Fake" />
+
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={history.slice(-10).map(h => ({
+                        date: new Date(h.timestamp).toLocaleDateString(),
+                        confidence: h.result.confidence
+                      }))}>
+                        <defs>
+                          <linearGradient id="colorConf" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="date" hide />
+                        <YAxis hide domain={[0, 100]} />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                        <Area type="monotone" dataKey="confidence" stroke="#2563eb" fillOpacity={1} fill="url(#colorConf)" strokeWidth={3} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
-                <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
-                  <div className="flex items-center justify-between mb-10">
-                    <h4 className="text-lg font-display font-bold text-slate-900">Confidence Trends</h4>
-                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                      <Activity size={20} />
+                {/* Top Domains Card */}
+                <div className="bg-slate-900 p-10 rounded-[2.5rem] text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/10 rounded-full blur-[60px]" />
+                  <div className="relative z-10">
+                    <h3 className="text-lg font-bold mb-8">Source Reliability</h3>
+                    <div className="space-y-8">
+                      {reliabilityStats?.topDomains.map((d, i) => (
+                        <div key={i} className="space-y-3">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-slate-400 truncate max-w-[140px]">{d.domain}</span>
+                            <span className={cn(
+                              d.reliability > 70 ? "text-emerald-400" :
+                              d.reliability > 40 ? "text-amber-400" : "text-rose-400"
+                            )}>{d.reliability}%</span>
+                          </div>
+                          <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full transition-all duration-1000",
+                                d.reliability > 70 ? "bg-emerald-500" :
+                                d.reliability > 40 ? "bg-amber-500" : "bg-rose-500"
+                              )}
+                              style={{ width: `${d.reliability}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {(!reliabilityStats || reliabilityStats.topDomains.length === 0) && (
+                        <div className="text-center py-20 text-slate-500 text-sm">
+                          No domain data available yet.
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={history.slice(0, 15).reverse()}>
-                        <defs>
-                          <linearGradient id="colorConf" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                        <XAxis dataKey="id" hide />
-                        <YAxis stroke="#94a3b8" fontSize={10} fontWeight="bold" />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: "#ffffff", border: "none", borderRadius: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.05)" }}
-                          itemStyle={{ color: "#3b82f6", fontWeight: "bold" }}
-                        />
-                        <Area type="monotone" dataKey="result.confidence" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorConf)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>

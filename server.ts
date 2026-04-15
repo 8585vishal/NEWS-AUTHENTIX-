@@ -110,7 +110,17 @@ app.post("/api/verify", async (req, res) => {
   }
 });
 
+let cachedNews: any = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
 app.get("/api/news-feed", async (req, res) => {
+  const now = Date.now();
+  if (cachedNews && (now - lastFetchTime < CACHE_DURATION)) {
+    console.log("Serving news feed from cache");
+    return res.json(cachedNews);
+  }
+
   try {
     const ai = getAI();
     const model = "gemini-flash-latest";
@@ -145,12 +155,22 @@ app.get("/api/news-feed", async (req, res) => {
       }
     });
 
-    const news = JSON.parse(response.text || "[]");
-    res.json(news);
+    cachedNews = JSON.parse(response.text || "[]");
+    lastFetchTime = now;
+    res.json(cachedNews);
   } catch (error: any) {
     console.error("News Feed Error:", error);
+    
+    // If we have cached news, serve it even if expired if the API fails
+    if (cachedNews) {
+      console.log("API failed, serving stale cache");
+      return res.json(cachedNews);
+    }
+
     let message = error.message || "Failed to fetch news feed";
-    if (message.includes("API key not valid") || message.includes("INVALID_ARGUMENT")) {
+    if (message.includes("429") || message.includes("quota")) {
+      message = "API Quota exceeded. Please try again in a few minutes. (Free tier limits apply)";
+    } else if (message.includes("API key not valid") || message.includes("INVALID_ARGUMENT")) {
       message = "The provided Gemini API key is invalid. Please check your key in the AI Studio Secrets panel.";
     }
     res.status(500).json({ error: message });
