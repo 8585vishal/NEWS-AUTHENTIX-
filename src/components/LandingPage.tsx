@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import DashboardPreview from "./DashboardPreview";
 
 export default function LandingPage() {
   return (
@@ -75,16 +76,15 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Dashboard Preview Mockup */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mt-20 relative max-w-5xl mx-auto"
           >
-            <div className="bg-slate-900 rounded-3xl p-4 shadow-2xl shadow-slate-900/20 border border-slate-800">
-              <div className="aspect-[16/9] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
-                <div className="text-slate-700 font-display text-2xl font-bold">Interactive Dashboard Preview</div>
+            <div className="bg-slate-900 rounded-[2.5rem] p-4 shadow-2xl shadow-slate-900/20 border border-slate-800">
+              <div className="aspect-[16/9] bg-slate-950 rounded-[2rem] overflow-hidden border border-slate-800">
+                <DashboardPreview />
               </div>
             </div>
             {/* Decorative elements */}
