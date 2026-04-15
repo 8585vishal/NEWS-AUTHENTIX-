@@ -1,29 +1,30 @@
 import React from "react";
-import { ShieldCheck, ArrowLeft, Loader2, Mail, Lock } from "lucide-react";
+import { ShieldCheck, ArrowLeft, Loader2, User, Mail, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../lib/auth";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   
   const [formData, setFormData] = React.useState({
+    username: "",
     email: "",
     password: ""
   });
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
     try {
-      await authService.login(formData.email, formData.password);
+      await authService.signup(formData.username, formData.email, formData.password);
       navigate("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Login failed. Please check your credentials.");
+      setError(err.message || "Signup failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -52,8 +53,8 @@ export default function LoginPage() {
             <ShieldCheck className="text-white w-8 h-8" />
           </div>
           
-          <h1 className="text-3xl font-display font-bold text-slate-900 mb-2 text-center">Welcome Back</h1>
-          <p className="text-slate-500 mb-8 text-center">Sign in to access the News Authentix suite.</p>
+          <h1 className="text-3xl font-display font-bold text-slate-900 mb-2 text-center">Create Account</h1>
+          <p className="text-slate-500 mb-8 text-center">Join News Authentix to start verifying news today.</p>
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl text-center">
@@ -61,7 +62,22 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleSignup} className="space-y-5">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Username</label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                <input
+                  type="text"
+                  required
+                  placeholder="johndoe"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Email Address</label>
               <div className="relative">
@@ -100,14 +116,14 @@ export default function LoginPage() {
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                "Sign In"
+                "Create Account"
               )}
             </button>
           </form>
 
           <div className="mt-8 pt-8 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-500">
-              Don't have an account? <Link to="/signup" className="text-blue-600 font-bold hover:underline">Create one</Link>
+              Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline">Sign in</Link>
             </p>
           </div>
         </div>

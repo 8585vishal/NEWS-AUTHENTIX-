@@ -9,13 +9,12 @@
 - **Source Trust Index**: Real-time credibility scoring for news URLs.
 - **Global News Feed**: Curated significant global news headlines.
 - **Analytics Dashboard**: Insights into verification trends and classification distribution.
-- **Secure Authentication**: Google OAuth integration via Firebase.
+- **Manual Authentication**: Custom signup and login system with local persistence.
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: React, TypeScript, Tailwind CSS, Framer Motion, Recharts.
 - **Backend**: Node.js (Express), Vercel Serverless Functions.
-- **Database & Auth**: Firebase (Firestore, Authentication).
 - **AI Engine**: Google Gemini API.
 
 ## 📦 Installation & Setup
@@ -32,12 +31,10 @@ npm install
 ```
 
 ### 3. Environment Configuration
-Create a `.env` file in the root directory and add your keys (see `.env.example` for the full list):
+Create a `.env` file in the root directory and add your Gemini API key:
 
 ```env
 GEMINI_API_KEY="your_gemini_api_key"
-VITE_FIREBASE_API_KEY="your_firebase_api_key"
-# ... add other VITE_FIREBASE_* variables
 ```
 
 ### 4. Run Locally
@@ -51,12 +48,12 @@ This project is pre-configured for Vercel deployment.
 
 1. Push your code to a GitHub repository.
 2. Connect the repository to Vercel.
-3. Add all variables from `.env.example` to the **Environment Variables** section in the Vercel project settings.
+3. Add `GEMINI_API_KEY` to the **Environment Variables** section in the Vercel project settings.
 4. Deploy!
 
 ## 🔒 Security Note
 
-The `firebase-applet-config.json` and `.env` files are included in `.gitignore` to prevent sensitive API keys from being exposed in public repositories. Always use environment variables for production deployments.
+The `.env` file is included in `.gitignore` to prevent sensitive API keys from being exposed in public repositories. Always use environment variables for production deployments.
 
 ## 📄 License
 

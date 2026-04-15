@@ -35,21 +35,7 @@ import {
   AreaChart,
   Area
 } from "recharts";
-import { auth, db } from "../firebase";
-import { 
-  onAuthStateChanged, 
-  signOut,
-  User
-} from "firebase/auth";
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  serverTimestamp 
-} from "firebase/firestore";
+import { authService, User } from "../lib/auth";
 import { VerificationResult, PredictionHistory } from "../types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -58,6 +44,8 @@ import { useNavigate } from "react-router-dom";
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+const HISTORY_KEY = "news_authentix_history";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -104,36 +92,24 @@ export default function Dashboard() {
   }, [activeTab]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        navigate("/login");
-      } else {
-        setUser(u);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      navigate("/login");
+    } else {
+      setUser(currentUser);
+      
+      // Load history from localStorage
+      const savedHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      const userHistory = savedHistory.filter((h: any) => h.userId === currentUser.id);
+      setHistory(userHistory);
+    }
+    setLoading(false);
   }, [navigate]);
 
-  useEffect(() => {
-    if (user) {
-      const q = query(
-        collection(db, "predictions"),
-        where("userId", "==", user.uid),
-        orderBy("timestamp", "desc")
-      );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const docs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as PredictionHistory[];
-        setHistory(docs);
-      });
-      return () => unsubscribe();
-    }
-  }, [user]);
-
-  const handleLogout = () => signOut(auth);
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/login");
+  };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,18 +135,21 @@ export default function Dashboard() {
       setResult(data);
 
       if (user) {
-        const path = "predictions";
-        try {
-          await addDoc(collection(db, path), {
-            userId: user.uid,
-            text: inputText,
-            url: inputUrl,
-            result: data,
-            timestamp: serverTimestamp(),
-          });
-        } catch (error) {
-          handleFirestoreError(error, "create" as any, path);
-        }
+        const newRecord: PredictionHistory = {
+          id: Math.random().toString(36).substring(2, 9),
+          userId: user.id,
+          text: inputText,
+          url: inputUrl,
+          result: data,
+          timestamp: new Date().toISOString() as any, // Mocking timestamp
+        };
+
+        const savedHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        const updatedHistory = [newRecord, ...savedHistory];
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+        
+        // Update local state
+        setHistory(updatedHistory.filter(h => h.userId === user.id));
       }
     } catch (error: any) {
       console.error("Verification failed", error);
@@ -178,19 +157,6 @@ export default function Dashboard() {
     } finally {
       setIsVerifying(false);
     }
-  };
-
-  const handleFirestoreError = (error: any, operationType: string, path: string) => {
-    const errInfo = {
-      error: error instanceof Error ? error.message : String(error),
-      authInfo: {
-        userId: auth.currentUser?.uid,
-        email: auth.currentUser?.email,
-      },
-      operationType,
-      path
-    };
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
   };
 
   if (loading) {
@@ -275,9 +241,11 @@ export default function Dashboard() {
         <div className="p-6 mt-auto">
           <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 mb-4">
             <div className="flex items-center gap-3 mb-4">
-              <img src={user.photoURL || ""} className="w-10 h-10 rounded-full border-2 border-blue-500/20" alt="User" />
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">{user.displayName}</p>
+                <p className="text-sm font-bold text-white truncate">{user.username}</p>
                 <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
               </div>
             </div>
@@ -297,7 +265,7 @@ export default function Dashboard() {
         <header className="h-20 border-b border-slate-200 flex items-center justify-between px-10 bg-white/80 backdrop-blur-md sticky top-0 z-10">
           <div>
             <h2 className="text-xl font-display font-bold text-slate-900 capitalize">{activeTab.replace('-', ' ')}</h2>
-            <p className="text-xs text-slate-500 font-medium">Welcome back, {user.displayName?.split(' ')[0]}</p>
+            <p className="text-xs text-slate-500 font-medium">Welcome back, {user.username}</p>
           </div>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-full">
@@ -682,7 +650,7 @@ export default function Dashboard() {
                     {history.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
                         <td className="px-8 py-6 text-xs font-bold text-slate-400">
-                          {item.timestamp?.toDate().toLocaleDateString()}
+                          {new Date(item.timestamp).toLocaleDateString()}
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-sm text-slate-900 font-bold truncate max-w-xs">{item.text || item.url}</p>
