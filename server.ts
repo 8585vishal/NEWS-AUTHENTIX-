@@ -43,7 +43,7 @@ app.post("/api/verify", async (req, res) => {
 
   try {
     const ai = getAI();
-    const model = "gemini-1.5-flash"; // Using 1.5-flash for maximum compatibility
+    const model = "gemini-flash-latest"; // Using latest flash model
     const prompt = `
       Analyze the following news content for authenticity.
       Classification: Authentic, Misleading, or Fake.
@@ -113,7 +113,7 @@ app.post("/api/verify", async (req, res) => {
 app.get("/api/news-feed", async (req, res) => {
   try {
     const ai = getAI();
-    const model = "gemini-1.5-flash";
+    const model = "gemini-flash-latest";
     const prompt = `
       Fetch the top 5 most recent and significant global news headlines from the last 24 hours.
       Provide the response as a JSON array of objects.
