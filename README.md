@@ -1,20 +1,63 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# News Authentix 🛡️
 
-# Run and deploy your AI Studio app
+**News Authentix** is a professional, enterprise-grade news verification platform that leverages advanced AI to mitigate misinformation. It provides deep content analysis, source credibility scoring, and explainable AI (LIME) evidence mapping.
 
-This contains everything you need to run your app locally.
+## 🚀 Features
 
-View your app in AI Studio: https://ai.studio/apps/280b566b-af05-4480-9f73-fc24c90a92c2
+- **AI Verification Engine**: Deep analysis using Google Gemini 1.5 Flash.
+- **Explainable AI (LIME)**: Visual mapping of evidence snippets with sentiment and type analysis.
+- **Source Trust Index**: Real-time credibility scoring for news URLs.
+- **Global News Feed**: Curated significant global news headlines.
+- **Analytics Dashboard**: Insights into verification trends and classification distribution.
+- **Secure Authentication**: Google OAuth integration via Firebase.
 
-## Run Locally
+## 🛠️ Tech Stack
 
-**Prerequisites:**  Node.js
+- **Frontend**: React, TypeScript, Tailwind CSS, Framer Motion, Recharts.
+- **Backend**: Node.js (Express), Vercel Serverless Functions.
+- **Database & Auth**: Firebase (Firestore, Authentication).
+- **AI Engine**: Google Gemini API.
 
+## 📦 Installation & Setup
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-username/news-authentix.git
+cd news-authentix
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Environment Configuration
+Create a `.env` file in the root directory and add your keys (see `.env.example` for the full list):
+
+```env
+GEMINI_API_KEY="your_gemini_api_key"
+VITE_FIREBASE_API_KEY="your_firebase_api_key"
+# ... add other VITE_FIREBASE_* variables
+```
+
+### 4. Run Locally
+```bash
+npm run dev
+```
+
+## 🌐 Deployment (Vercel)
+
+This project is pre-configured for Vercel deployment.
+
+1. Push your code to a GitHub repository.
+2. Connect the repository to Vercel.
+3. Add all variables from `.env.example` to the **Environment Variables** section in the Vercel project settings.
+4. Deploy!
+
+## 🔒 Security Note
+
+The `firebase-applet-config.json` and `.env` files are included in `.gitignore` to prevent sensitive API keys from being exposed in public repositories. Always use environment variables for production deployments.
+
+## 📄 License
+
+This project is licensed under the MIT License.

@@ -1,34 +1,19 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
-import path from "path";
-import { fileURLToPath } from "url";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
-const PORT = 3000;
-
 app.use(express.json());
 
 // Initialize Gemini API
 const getAI = () => {
-  // In AI Studio, GEMINI_API_KEY is automatically provided.
   const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || process.env.GOOGLE_API_KEY;
 
   if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
-    throw new Error("GEMINI_API_KEY is not configured. Please ensure the 'AI Studio Free Tier' key is active in your Secrets panel.");
+    throw new Error("GEMINI_API_KEY is not configured.");
   }
-
-  // Log masked key for verification
-  const maskedKey = apiKey.length > 8 
-    ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`
-    : "****";
-  console.log(`Using API Key: ${maskedKey} (Source: ${process.env.GEMINI_API_KEY ? 'Platform' : 'Other'})`);
 
   return new GoogleGenAI({ apiKey });
 };
@@ -43,7 +28,7 @@ app.post("/api/verify", async (req, res) => {
 
   try {
     const ai = getAI();
-    const model = "gemini-1.5-flash"; // Using 1.5-flash for maximum compatibility
+    const model = "gemini-1.5-flash";
     const prompt = `
       Analyze the following news content for authenticity.
       Classification: Authentic, Misleading, or Fake.
@@ -52,11 +37,9 @@ app.post("/api/verify", async (req, res) => {
       CRITICAL: Provide a detailed breakdown of the 'evidence'. 
       For each piece of evidence:
       1. Extract the exact 'phrase' or snippet from the content.
-      2. Provide a clear 'explanation' of why this snippet contributes to the classification (e.g., factual inconsistency, loaded language, verifiable claim).
+      2. Provide a clear 'explanation' of why this snippet contributes to the classification.
       3. Determine the 'sentiment' of the snippet (Positive, Negative, or Neutral).
-      4. Categorize the evidence 'type' (e.g., "Factual Claim", "Emotional Bias", "Source Credibility", "Logical Fallacy").
-
-      Check source credibility if a URL is provided.
+      4. Categorize the evidence 'type'.
 
       Content: ${text || url}
     `;
@@ -104,7 +87,7 @@ app.post("/api/verify", async (req, res) => {
     console.error("Verification Error:", error);
     let message = error.message || "Failed to verify news";
     if (message.includes("API key not valid") || message.includes("INVALID_ARGUMENT")) {
-      message = "The provided Gemini API key is invalid. Please check your key in the AI Studio Secrets panel.";
+      message = "The provided Gemini API key is invalid.";
     }
     res.status(500).json({ error: message });
   }
@@ -118,7 +101,6 @@ app.get("/api/news-feed", async (req, res) => {
       Fetch the top 5 most recent and significant global news headlines from the last 24 hours.
       Provide the response as a JSON array of objects.
       Each object must have: title, description, url, source, publishedAt (ISO string), and an optional image URL.
-      Focus on major international news, technology, and science.
     `;
 
     const response = await ai.models.generateContent({
@@ -151,29 +133,10 @@ app.get("/api/news-feed", async (req, res) => {
     console.error("News Feed Error:", error);
     let message = error.message || "Failed to fetch news feed";
     if (message.includes("API key not valid") || message.includes("INVALID_ARGUMENT")) {
-      message = "The provided Gemini API key is invalid. Please check your key in the AI Studio Secrets panel.";
+      message = "The provided Gemini API key is invalid.";
     }
     res.status(500).json({ error: message });
   }
-});
-
-// Vite middleware for development
-if (process.env.NODE_ENV !== "production") {
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
-} else {
-  const distPath = path.join(process.cwd(), "dist");
-  app.use(express.static(distPath));
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-}
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://localhost:${PORT}`);
 });
 
 export default app;
