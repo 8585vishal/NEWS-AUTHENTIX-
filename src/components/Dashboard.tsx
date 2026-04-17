@@ -66,6 +66,16 @@ export default function Dashboard() {
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [showTruthMap, setShowTruthMap] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState("General");
+
+  const categories = ["General", "Technology", "Science", "Business", "World", "Health", "Entertainment"];
+
+  const handleShare = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2000);
+  };
 
   const getReliabilityStats = () => {
     if (history.length === 0) return null;
@@ -144,7 +154,7 @@ ${result.sourceCredibility?.details || "No source details available."}
     setIsLoadingFeed(true);
     setFeedError(null);
     try {
-      const response = await fetch("/api/news-feed");
+      const response = await fetch(`/api/news-feed?category=${encodeURIComponent(selectedCategory)}`);
       const data = await response.json();
       if (data.error) {
         setFeedError(data.error);
@@ -167,7 +177,7 @@ ${result.sourceCredibility?.details || "No source details available."}
     if (activeTab === "feed") {
       fetchNewsFeed();
     }
-  }, [activeTab]);
+  }, [activeTab, selectedCategory]);
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
@@ -239,7 +249,7 @@ ${result.sourceCredibility?.details || "No source details available."}
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
           <p className="text-slate-400 font-medium animate-pulse">Initializing News Authentix...</p>
@@ -373,7 +383,9 @@ ${result.sourceCredibility?.details || "No source details available."}
                   </div>
                   <span className={cn(
                     "text-[10px] font-bold px-2 py-1 rounded-lg",
-                    stat.trend.includes('+') || stat.trend.includes('%') ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-500"
+                    stat.trend.includes('+') || stat.trend.includes('%') 
+                      ? "bg-emerald-50 text-emerald-600" 
+                      : "bg-slate-50 text-slate-500"
                   )}>
                     {stat.trend}
                   </span>
@@ -383,7 +395,6 @@ ${result.sourceCredibility?.details || "No source details available."}
               </motion.div>
             ))}
           </div>
-
           {activeTab === "verify" && (
             <div className="space-y-10">
               <section className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm">
@@ -437,6 +448,7 @@ ${result.sourceCredibility?.details || "No source details available."}
                         placeholder="https://news-source.com/article"
                       />
                     </div>
+
                     <button 
                       disabled={isVerifying || (!inputText && !inputUrl)}
                       className="px-10 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-600/20 group"
@@ -667,7 +679,25 @@ ${result.sourceCredibility?.details || "No source details available."}
           )}
 
           {activeTab === "feed" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-8">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={cn(
+                      "px-5 py-2 rounded-full text-xs font-bold transition-all border",
+                      selectedCategory === cat
+                        ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20"
+                        : "bg-white border-slate-100 text-slate-500 hover:border-slate-300"
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {isLoadingFeed ? (
                 <div className="col-span-full flex flex-col items-center justify-center py-32 gap-4">
                   <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
@@ -740,14 +770,41 @@ ${result.sourceCredibility?.details || "No source details available."}
                         >
                           Verify with AI <ChevronRight size={14} />
                         </button>
-                        <a 
-                          href={article.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 hover:bg-slate-50 rounded-full transition-all"
-                        >
-                          <ExternalLink size={18} />
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleShare(article.url)}
+                            className={cn(
+                              "w-10 h-10 flex items-center justify-center rounded-full transition-all relative",
+                              copiedUrl === article.url 
+                                ? "bg-emerald-50 text-emerald-600" 
+                                : "text-slate-300 hover:text-slate-900 hover:bg-slate-50"
+                            )}
+                            title="Share Article"
+                          >
+                            <AnimatePresence mode="wait">
+                              {copiedUrl === article.url ? (
+                                <motion.span
+                                  key="check"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  exit={{ scale: 0 }}
+                                  className="text-[10px] font-bold absolute -top-8 bg-slate-900 text-white px-2 py-1 rounded"
+                                >
+                                  Copied!
+                                </motion.span>
+                              ) : null}
+                            </AnimatePresence>
+                            <Share2 size={18} />
+                          </button>
+                          <a 
+                            href={article.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 hover:bg-slate-50 rounded-full transition-all"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -761,8 +818,8 @@ ${result.sourceCredibility?.details || "No source details available."}
                 </div>
               )}
             </div>
-          )}
-
+          </div>
+        )}
           {activeTab === "history" && (
             <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm">
               <div className="p-8 border-b border-slate-50 flex items-center justify-between">
@@ -792,6 +849,7 @@ ${result.sourceCredibility?.details || "No source details available."}
                           <p className="text-sm text-slate-900 font-bold truncate max-w-xs">{item.text || item.url}</p>
                           <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">{item.url ? "Source URL" : "Raw Text"}</p>
                         </td>
+
                         <td className="px-8 py-6">
                           <span className={cn(
                             "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5",

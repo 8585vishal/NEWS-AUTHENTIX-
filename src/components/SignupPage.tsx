@@ -38,10 +38,12 @@ export default function SignupPage() {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/5 rounded-full blur-[120px]" />
       </div>
 
-      <Link to="/" className="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-medium">
-        <ArrowLeft size={20} />
-        Back to Home
-      </Link>
+      <div className="absolute top-8 left-8 flex items-center gap-4">
+        <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-medium">
+          <ArrowLeft size={20} />
+          Back to Home
+        </Link>
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -71,7 +73,7 @@ export default function SignupPage() {
                   type="text"
                   required
                   placeholder="johndoe"
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 />
@@ -86,7 +88,7 @@ export default function SignupPage() {
                   type="email"
                   required
                   placeholder="name@company.com"
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
@@ -101,7 +103,7 @@ export default function SignupPage() {
                   type="password"
                   required
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
@@ -123,7 +125,7 @@ export default function SignupPage() {
 
           <div className="mt-8 pt-8 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-500">
-              Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline">Sign in</Link>
+              Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline transition-colors">Sign in</Link>
             </p>
           </div>
         </div>

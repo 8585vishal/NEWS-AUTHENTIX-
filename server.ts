@@ -110,25 +110,26 @@ app.post("/api/verify", async (req, res) => {
   }
 });
 
-let cachedNews: any = null;
-let lastFetchTime = 0;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const cachedNews: Record<string, { data: any, timestamp: number }> = {};
 
 app.get("/api/news-feed", async (req, res) => {
+  const category = (req.query.category as string) || "General";
   const now = Date.now();
-  if (cachedNews && (now - lastFetchTime < CACHE_DURATION)) {
-    console.log("Serving news feed from cache");
-    return res.json(cachedNews);
+  
+  if (cachedNews[category] && (now - cachedNews[category].timestamp < CACHE_DURATION)) {
+    console.log(`Serving ${category} news feed from cache`);
+    return res.json(cachedNews[category].data);
   }
 
   try {
     const ai = getAI();
     const model = "gemini-flash-latest";
     const prompt = `
-      Fetch the top 5 most recent and significant global news headlines from the last 24 hours.
+      Fetch the top 5 most recent and significant ${category} news headlines from the last 24 hours.
       Provide the response as a JSON array of objects.
       Each object must have: title, description, url, source, publishedAt (ISO string), and an optional image URL.
-      Focus on major international news, technology, and science.
+      Focus on major coverage within the ${category} sector.
     `;
 
     const response = await ai.models.generateContent({
@@ -155,16 +156,16 @@ app.get("/api/news-feed", async (req, res) => {
       }
     });
 
-    cachedNews = JSON.parse(response.text || "[]");
-    lastFetchTime = now;
-    res.json(cachedNews);
+    const newsData = JSON.parse(response.text || "[]");
+    cachedNews[category] = { data: newsData, timestamp: now };
+    res.json(newsData);
   } catch (error: any) {
-    console.error("News Feed Error:", error);
+    console.error(`News Feed (${category}) Error:`, error);
     
     // If we have cached news, serve it even if expired if the API fails
-    if (cachedNews) {
-      console.log("API failed, serving stale cache");
-      return res.json(cachedNews);
+    if (cachedNews[category]) {
+      console.log(`API failed for ${category}, serving stale cache`);
+      return res.json(cachedNews[category].data);
     }
 
     let message = error.message || "Failed to fetch news feed";

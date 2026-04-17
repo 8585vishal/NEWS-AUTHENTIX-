@@ -2,7 +2,11 @@
 
 **News Authentix** is a professional, enterprise-grade news verification platform that leverages advanced AI to mitigate misinformation. It provides deep content analysis, source credibility scoring, and explainable AI (LIME) evidence mapping.
 
-## 🚀 Features
+## 📖 Documentation
+
+For a deep dive into the architecture, AI logic, and technical implementation, please refer to the **[Full Technical Documentation](./DOCUMENTATION.md)**.
+
+## 🚀 Key Features
 
 - **AI Verification Engine**: Deep analysis using Google Gemini 1.5 Flash.
 - **Explainable AI (LIME)**: Visual mapping of evidence snippets with sentiment and type analysis.
